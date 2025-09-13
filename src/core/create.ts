@@ -28,7 +28,7 @@ async function downloadFile(
     const arrayBuffer = await response.arrayBuffer();
     await Deno.writeFile(destinationPath, new Uint8Array(arrayBuffer));
   } catch (error) {
-    throw new Error(`Download failed: ${error.message}`);
+    throw new Error(`Download failed: ${error}`);
   }
 }
 
@@ -87,7 +87,7 @@ async function downloadRemoteTemplate(
     } catch {
       // Ignore cleanup errors
     }
-    throw new Error(`Failed to download remote template: ${error.message}`);
+    throw new Error(`Failed to download remote template: ${error}`);
   }
 }
 
@@ -115,13 +115,13 @@ async function getRemoteTemplatesList(): Promise<string[]> {
 
     return templates;
   } catch (error) {
-    console.warn(`⚠️ Could not fetch remote templates list: ${error.message}`);
+    console.warn(`⚠️ Could not fetch remote templates list: ${error}`);
     return ["basic", "counter"]; // Fallback 
   }
 }
 
 export async function createProject(options: CreateProjectOptions) {
-  const { projectName, targetDir, template, force, remote = false } = options;
+  const { projectName, targetDir, template, force } = options;
 
   console.log(`\n🚀 Creating new cSSG project: ${projectName}\n`);
 
@@ -215,7 +215,7 @@ export async function createProject(options: CreateProjectOptions) {
         await Deno.remove(tempDir, { recursive: true });
         console.log(`🧹 Cleaned up temporary files`);
       } catch (error) {
-        console.warn(`⚠️ Could not clean up temp directory: ${error.message}`);
+        console.warn(`⚠️ Could not clean up temp directory: ${error}`);
       }
     }
   }
