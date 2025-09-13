@@ -1,11 +1,12 @@
 import { Eta } from "@eta-dev/eta";
-import { ensureDir, emptyDir, walk } from "@std/fs";
+import { ensureDir, emptyDir, walk, copy } from "@std/fs";
 import { join, relative } from "@std/path";
 import { config } from "../site.config.ts";
 
 export async function build() {
   const srcDir = join(Deno.cwd(), "src");
   const distDir = join(Deno.cwd(), "dist");
+  const assetsDir = join(srcDir, "assets");
   const pagesDir = join(srcDir, "pages");
 
   const eta = new Eta({ views: srcDir });
@@ -13,6 +14,9 @@ export async function build() {
   // Memastikan dist bersih
   await emptyDir(distDir);
   await ensureDir(distDir);
+
+  // Salin semua aset statis (CSS, JS, gambar, dll.)
+  await copy(assetsDir, join(distDir, "assets"), { overwrite: true });
 
   // Loop melalui semua file di direktori pages
   for await (const entry of walk(pagesDir, { includeDirs: false })) {
@@ -26,20 +30,10 @@ export async function build() {
         // Render halaman spesifik
         const body = eta.render(pageRel, ctx)!;
 
-        // Cari file .js yang didefinisikan di halaman
+        // Buat tag <script> jika didefinisikan di halaman
         let scripts = "";
         if (ctx.script) {
-          const scriptPath = join(srcDir, "assets/js", ctx.script);
-          try {
-            const scriptContent = await Deno.readTextFile(scriptPath);
-            scripts = `<script type="module">${scriptContent}</script>`;
-          } catch (error) {
-            if (error instanceof Deno.errors.NotFound) {
-              console.warn(`⚠️ Script not found for ${pageRel}: ${scriptPath}`);
-            } else {
-              throw error;
-            }
-          }
+          scripts = `<script src="/assets/js/${ctx.script}" type="module"></script>`;
         }
 
         // Render layout utama dengan body dan script dari halaman
