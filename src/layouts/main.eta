@@ -11,5 +11,7 @@
   <main>
     <%~ it.body %>
   </main>
+
+  <%~ it.scripts %>
 </body>
 </html>

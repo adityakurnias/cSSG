@@ -21,16 +21,33 @@ export async function build() {
         // Path relatif halaman
         const pageRel = relative(srcDir, entry.path).replace(/\\/g, "/");
 
-        // Render halaman spesifik dengan data dari site.config.ts
-        const body = eta.render(pageRel, config.site)!;
+        const ctx: Record<string, any> = { ...config.site, script: undefined };
 
-        // Render layout utama dengan body dari halaman
-        // TODO: Bisa dibuat dinamis (mis. baca dari front-matter)
-        const html = eta.render("templates/layout.eta", {
-          ...config.site,
+        // Render halaman spesifik
+        const body = eta.render(pageRel, ctx)!;
+
+        // Cari file .js yang didefinisikan di halaman
+        let scripts = "";
+        if (ctx.script) {
+          const scriptPath = join(srcDir, "assets/js", ctx.script);
+          try {
+            const scriptContent = await Deno.readTextFile(scriptPath);
+            scripts = `<script type="module">${scriptContent}</script>`;
+          } catch (error) {
+            if (error instanceof Deno.errors.NotFound) {
+              console.warn(`⚠️ Script not found for ${pageRel}: ${scriptPath}`);
+            } else {
+              throw error;
+            }
+          }
+        }
+
+        // Render layout utama dengan body dan script dari halaman
+        const html = eta.render("layouts/main.eta", {
+          ...ctx,
           body,
+          scripts,
         })!;
-
         // Tentukan path output
         const outPath = join(
           distDir,
