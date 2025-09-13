@@ -2,7 +2,7 @@ import { Eta } from "@eta-dev/eta";
 import { ensureDir, emptyDir, walk } from "@std/fs";
 import { join, relative } from "@std/path";
 import * as esbuild from "esbuild";
-import { config } from "../site.config.ts";
+import { config } from "../../templates/site.config.ts";
 
 /**
  * Fungsi build utama untuk SSG.

@@ -1,3 +1,8 @@
+---
+title: "Tentang cSSG"
+layout: "main.eta" # Ini bisa diubah ke layout lain, misal 'post.eta'
+---
+
 <p>
   Ini adalah halaman tentang cSSG, SSG sederhana yang dibuat dalam 30 menit
   kurleb...... Lebihnya 5 jam

@@ -1,6 +1,6 @@
 import { serveDir } from "@std/http/file-server";
 import { join } from "@std/path";
-import { build } from "./build.ts";
+import { build } from "@adityakurnias/cssg";
 
 // Menyimpan semua koneksi WebSocket yang aktif untuk Hot Module Replacement (HMR).
 const clients = new Set<WebSocket>();
