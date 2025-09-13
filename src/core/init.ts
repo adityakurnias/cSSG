@@ -72,23 +72,46 @@ async function writeFile(filePath: string, content: string) {
   }
 }
 
-export async function init(root: string) {
-  console.log(`\n🚀 Initializing new cSSG project in ${root}...\n`);
+export async function init(targetRoot: string) {
+  const isCurrentDir = targetRoot === Deno.cwd();
+  const projectName = path.basename(targetRoot);
+  const relativePath = path.relative(Deno.cwd(), targetRoot);
+
+  console.log(
+    `\n🚀 Initializing new cSSG project in ${
+      isCurrentDir ? "current directory" : `\`${relativePath}\``
+    }...\n`
+  );
 
   const dirs = ["src", "src/pages", "src/layouts", "src/data", "src/assets"];
   for (const dir of dirs) {
-    const dirPath = path.join(root, dir);
+    const dirPath = path.join(targetRoot, dir);
     await ensureDir(dirPath);
     console.log(`✅ Created directory: ${path.relative(Deno.cwd(), dirPath)}`);
   }
 
-  await writeFile(path.join(root, "cssg.config.ts"), cssgConfigContent);
-  await writeFile(path.join(root, ".gitignore"), gitignoreContent);
-  await writeFile(path.join(root, "src/layouts/main.eta"), mainLayoutContent);
-  await writeFile(path.join(root, "src/pages/index.eta"), indexPageContent);
+  await writeFile(path.join(targetRoot, "cssg.config.ts"), cssgConfigContent);
+  await writeFile(path.join(targetRoot, ".gitignore"), gitignoreContent);
+  await writeFile(
+    path.join(targetRoot, "src/layouts/main.eta"),
+    mainLayoutContent
+  );
+  await writeFile(
+    path.join(targetRoot, "src/pages/index.eta"),
+    indexPageContent
+  );
 
   console.log("\n✨ Project initialized successfully!");
   console.log("Next steps:");
-  console.log("  1. Run `cssg dev` to start the development server.");
-  console.log("  2. Start building your amazing site!");
+  if (!isCurrentDir) {
+    console.log(`  1. cd ${relativePath}`);
+  }
+  console.log(
+    `  ${
+      isCurrentDir ? "1." : "2."
+    } Run \`cssg dev\` to start the development server.`
+  );
+  console.log(
+    `  ${isCurrentDir ? "2." : "3."} Start building your amazing site!`
+  );
 }

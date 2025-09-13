@@ -1,5 +1,6 @@
 import { parseArgs } from "@std/cli/parse-args";
 import { build } from "./core/build.ts";
+import { resolve } from "@std/path";
 import { loadConfig } from "./core/config.ts";
 import { init } from "./core/init.ts";
 
@@ -23,9 +24,13 @@ COMMANDS:
 const userRoot = Deno.cwd();
 
 switch (command) {
-  case "init":
-    await init(userRoot);
+  case "init": {
+    const projectDir =
+      typeof args._[1] === "string" ? (args._[1] as string) : ".";
+    const targetRoot = resolve(userRoot, projectDir);
+    await init(targetRoot);
     break;
+  }
 
   case "build": {
     const config = await loadConfig(userRoot);
