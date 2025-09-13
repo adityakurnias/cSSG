@@ -1,6 +1,6 @@
 {
   "name": "@adityakurnias/cssg",
-  "version": "0.0.41",
+  "version": "0.0.412",
   "license": "MIT",
   "exports": "./mod.ts",
   "executables": {
