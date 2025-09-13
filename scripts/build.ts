@@ -10,6 +10,9 @@ import { config } from "../site.config.ts";
  */
 export async function build(mode: "dev" | "prod" = "prod") {
   const isProd = mode === "prod";
+  // Untuk GitHub Pages, aset memerlukan base path (nama repo).
+  // Di lokal, ini akan menjadi string kosong.
+  const basePath = Deno.env.get("BASE_PATH") || "";
   console.log(`\n--- 🚀 Memulai build mode '${mode}' ---`);
 
   const srcDir = join(Deno.cwd(), "src");
@@ -82,6 +85,7 @@ export async function build(mode: "dev" | "prod" = "prod") {
           const ctx: Record<string, any> = {
             ...config.site,
             ...siteData,
+            basePath: basePath, // Suntikkan base path ke dalam konteks
             script: undefined,
           };
 
@@ -89,7 +93,7 @@ export async function build(mode: "dev" | "prod" = "prod") {
 
           let scripts = "";
           if (ctx.script) {
-            scripts = `<script src="/assets/js/${ctx.script}" type="module"></script>`;
+            scripts = `<script src="${basePath}/assets/js/${ctx.script}" type="module"></script>`;
           }
 
           const html = eta.render("layouts/main.eta", {

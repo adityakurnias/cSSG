@@ -4,7 +4,7 @@
 </p>
 <a href="https://github.com/adityakurnias">Github Saya</a>
 <br />
-<a href="index.html">Balik Ke Halaman Utama</a>
+<a href="<%= it.basePath %>/">Balik Ke Halaman Utama</a>
 
 <h3 style="margin-top: 2rem">Tim Pengembang</h3>
 <ul>
