@@ -11,7 +11,6 @@ export type ResolvedConfig = {
   dataDir: string;
   assetsDir: string;
   outDir: string;
-  // Kita bisa tambahkan properti lain di sini nanti, seperti `site`
   site: Record<string, any>;
 };
 
