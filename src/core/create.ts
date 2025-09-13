@@ -44,8 +44,11 @@ export async function createProject(options: CreateProjectOptions) {
   await ensureDir(targetDir);
 
   // Get template source directory
-  const __dirname = path.dirname(path.fromFileUrl(import.meta.url));
-  const templateSourceDir = path.resolve(__dirname, "..", "..", "templates");
+  // Use Deno.mainModule which consistently points to the file path
+  // of the main script, whether run locally or installed.
+  // This avoids issues with import.meta.url being an https:// URL.
+  const moduleDir = path.dirname(path.fromFileUrl(Deno.mainModule));
+  const templateSourceDir = path.resolve(moduleDir, "..", "templates");
   const availableTemplates = [];
   for await (const entry of Deno.readDir(templateSourceDir)) {
     if (entry.isDirectory) {
