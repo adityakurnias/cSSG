@@ -3,7 +3,6 @@ import { ensureDir, emptyDir, walk } from "@std/fs";
 import { join, relative } from "@std/path";
 import { config } from "../site.config.ts";
 
-// Fungsi utama untuk membangun site
 export async function build() {
   const srcDir = join(Deno.cwd(), "src");
   const distDir = join(Deno.cwd(), "dist");
