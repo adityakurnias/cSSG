@@ -3,11 +3,12 @@
     "@eta-dev/eta": "jsr:@eta-dev/eta@^3.5.0",
     "@std/fs": "jsr:@std/fs@^1.0.19",
     "@std/http": "jsr:@std/http@^1.0.20",
-    "@std/path": "jsr:@std/path@^1.1.2"
+    "@std/path": "jsr:@std/path@^1.1.2",
+    "esbuild": "npm:esbuild@^0.25.9"
   },
   "tasks": {
-    "dev": "deno run -A ./scripts/dev.ts",
-    "build": "deno run ./scripts/build.ts",
-    "serve": "deno run -A ./scripts/serve.ts dist"
+    "build": "deno run -A scripts/build.ts",
+    "dev": "deno run -A scripts/dev.ts",
+    "serve": "deno run -A scripts/serve.ts dist"
   }
 }
