@@ -4,103 +4,122 @@ import { join, relative } from "@std/path";
 import * as esbuild from "esbuild";
 import { config } from "../site.config.ts";
 
+/**
+ * Fungsi build utama untuk SSG.
+ * @param mode Menentukan mode build: 'dev' untuk pengembangan, 'prod' untuk produksi.
+ */
 export async function build(mode: "dev" | "prod" = "prod") {
+  const isProd = mode === "prod";
+  console.log(`\n--- 🚀 Memulai build mode '${mode}' ---`);
+
   const srcDir = join(Deno.cwd(), "src");
   const distDir = join(Deno.cwd(), "dist");
   const assetsDir = join(srcDir, "assets");
   const pagesDir = join(srcDir, "pages");
 
   try {
-    const eta = new Eta({ views: srcDir });
-
-    // Memastikan dist bersih
-    await emptyDir(distDir);
+    // Hanya bersihkan direktori 'dist' pada build pertama atau build produksi.
+    // Ini mencegah penghapusan yang tidak perlu selama hot-reload.
+    if (isProd) {
+      await emptyDir(distDir);
+    }
     await ensureDir(distDir);
 
-    console.log("📦 Processing assets...");
-    // 1. Bundel dan minifikasi CSS
-    let ctx: esbuild.BuildContext | null = null;
+    const eta = new Eta({ views: srcDir });
 
-    if (mode === "dev") {
-      ctx = await esbuild.context({
-        entryPoints: [join(assetsDir, "css/style.css")],
-        outfile: join(distDir, "assets/css/style.css"),
+    // --- Pemrosesan Aset (CSS & JS) ---
+    console.log("📦 Memproses aset...");
+
+    const assetPromises = [];
+
+    // 1. Konfigurasi untuk bundel dan minifikasi CSS
+    assetPromises.push(
+      esbuild.build({
+        entryPoints: [join(assetsDir, "css", "style.css")],
+        outfile: join(distDir, "assets", "css", "style.css"),
         bundle: true,
-        sourcemap: true,
-      });
-      await ctx.watch(); // watch internal
-    }
+        minify: isProd,
+        sourcemap: !isProd,
+      })
+    );
 
-    console.log("   - CSS bundled and minified.");
-
-    // 2. Minifikasi file JavaScript
+    // 2. Konfigurasi untuk file JavaScript
     const jsAssetsDir = join(assetsDir, "js");
     for await (const entry of walk(jsAssetsDir, { exts: [".js"] })) {
       const jsRelPath = relative(assetsDir, entry.path);
-      await esbuild.build({
-        entryPoints: [entry.path],
-        outfile: join(distDir, "assets", jsRelPath),
-        minify: mode === "prod",
-        bundle: true,
-        sourcemap: mode === "dev",
-      });
+      assetPromises.push(
+        esbuild.build({
+          entryPoints: [entry.path],
+          outfile: join(distDir, "assets", jsRelPath),
+          minify: isProd,
+          bundle: isProd,
+          sourcemap: !isProd,
+        })
+      );
     }
-    console.log("   - JavaScript minified.");
-    console.log("📂 Assets processed.");
 
-    // Loop melalui semua file di direktori pages
+    await Promise.all(assetPromises);
+    console.log("✅ Aset berhasil diproses.");
+
+    // --- Memuat Data Dinamis ---
+    // Secara otomatis memuat semua file .json dari direktori data.
+    // Kunci objek akan menjadi nama file.
+    console.log("📚 Memuat data...");
+    const siteData: Record<string, any> = {};
+    const dataDir = join(srcDir, "data");
+    for await (const entry of walk(dataDir, { exts: [".json"] })) {
+      const key = relative(dataDir, entry.path).replace(".json", "");
+      siteData[key] = JSON.parse(await Deno.readTextFile(entry.path));
+    }
+    console.log(`✅ Data berhasil dimuat: ${Object.keys(siteData).join(", ")}`);
+
+    // --- Merender Halaman Eta ke HTML ---
+    console.log("📄 Merender halaman...");
     for await (const entry of walk(pagesDir, { includeDirs: false })) {
       if (entry.isFile && entry.name.endsWith(".eta")) {
         try {
-          // Path relatif halaman
           const pageRel = relative(srcDir, entry.path).replace(/\\/g, "/");
-
           const ctx: Record<string, any> = {
             ...config.site,
+            ...siteData,
             script: undefined,
           };
 
-          // Render halaman spesifik
           const body = eta.render(pageRel, ctx)!;
 
-          // Buat tag <script> jika didefinisikan di halaman
           let scripts = "";
           if (ctx.script) {
             scripts = `<script src="/assets/js/${ctx.script}" type="module"></script>`;
           }
 
-          // Render layout utama dengan body dan script dari halaman
           const html = eta.render("layouts/main.eta", {
             ...ctx,
             body,
             scripts,
           })!;
-          // Tentukan path output
+
           const outPath = join(
             distDir,
             relative(pagesDir, entry.path).replace(".eta", ".html")
           );
 
-          // Memastikan ada direktori tujuan
           await ensureDir(join(outPath, ".."));
-
-          // Ouput
           await Deno.writeTextFile(outPath, html);
-
-          console.log(
-            `✅ ${relative(Deno.cwd(), entry.path)} → ${relative(
-              Deno.cwd(),
-              outPath
-            )}`
-          );
         } catch (err) {
           console.error(`❌ Error render ${entry.path}:`, err);
         }
       }
     }
+    console.log("✅ Halaman berhasil dirender.");
 
-    console.log("✨ Build selesai!");
+    console.log(`\n--- ✨ Build mode '${mode}' selesai! ---`);
   } finally {
+    // Hentikan proses esbuild agar skrip bisa keluar dengan bersih.
     esbuild.stop();
   }
+}
+
+if (import.meta.main) {
+  const mode = Deno.args.includes("dev") ? "dev" : "prod";
+  await build(mode);
 }

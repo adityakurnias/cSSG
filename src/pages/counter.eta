@@ -4,3 +4,4 @@
   <p>Kamu sudah klik tombol ini <span id="count">0</span> kali.</p>
   <button id="btn">Klik Saya</button>
 </div>
+<p><%~ it.counter[0].description %></p>

@@ -1,7 +1,7 @@
 [
   {
     "name": "cSSG",
-    "desc": "Static Site Generator mini berbasis Deno dan ETA. Dirancang simpel untuk belajar dan eksperimen membuat website statis.",
+    "desc": "c Static Site Generator mini berbasis Deno dan ETA. Dirancang simpel untuk belajar dan eksperimen membuat website statis.",
     "url": "https://github.com/adityakurnias/cSSG"
   },
   {

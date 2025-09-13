@@ -1,4 +1,14 @@
-<p>Ini adalah halaman tentang cSSG, SSG sederhana yang dibuat dalam 30 menit kurleb...... Lebihnya 3 jam</p>
+<p>
+  Ini adalah halaman tentang cSSG, SSG sederhana yang dibuat dalam 30 menit
+  kurleb...... Lebihnya 3 jam
+</p>
 <a href="https://github.com/adityakurnias">Github Saya</a>
-<br>
+<br />
 <a href="index.html">Balik Ke Halaman Utama</a>
+
+<h3 style="margin-top: 2rem">Tim Pengembang</h3>
+<ul>
+  <% it.authors.forEach(author => { %>
+  <li><strong><%~ author.name %></strong> - <%~ author.role %></li>
+  <% }) %>
+</ul>
