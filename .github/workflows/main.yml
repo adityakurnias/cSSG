@@ -40,12 +40,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-deno-
 
-      - name: Install dependencies
-        run: deno cache build.ts dev.ts
-
       - name: Build site
-        run: deno run --allow-read --allow-write --allow-net --allow-env build.ts prod
-        
+        run: deno task build
+
       - name: List dist contents (debug)
         run: find dist -type f -name "*.html" -o -name "*.css" -o -name "*.js" | head -20
 
