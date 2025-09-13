@@ -1,9 +1,0 @@
-{
-  "tasks": {
-    "dev": "cssg dev",
-    "build": "cssg build"
-  },
-  "imports": {
-    "@adityakurnias/cssg": "jsr:@adityakurnias/cssg@^0.0.3-beta"
-  }
-}
