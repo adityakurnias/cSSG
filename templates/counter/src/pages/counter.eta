@@ -1,0 +1,11 @@
+---
+title: "Counter"
+layout: "main"
+---
+
+<% it.script = 'counter.js' %>
+
+<div id="counter">
+  <p>You've clicked this button <span id="count">0</span> times.</p>
+  <button id="btn">Click Me</button>
+</div>

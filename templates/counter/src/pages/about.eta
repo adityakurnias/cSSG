@@ -1,0 +1,10 @@
+---
+title: "About"
+layout: "main"
+---
+
+<h1>About This Site</h1>
+
+<p>This is a sample about page. You can customize this content by editing <code>src/pages/about.eta</code>.</p>
+
+<p>Built with ❤️ using <a href="https://jsr.io/@adityakurnias/cssg">cSSG</a>.</p>

@@ -1,9 +1,0 @@
-<ul class="project-list">
-  <% it.projects.forEach(project => { %>
-  <li class="project-card">
-    <h2><%~ project.name %></h2>
-    <p><%~ project.desc %></p>
-    <a href="<%~ project.url %>">Lihat Project di Github</a>
-  </li>
-  <% }) %>
-</ul>

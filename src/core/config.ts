@@ -1,8 +1,8 @@
 import * as path from "@std/path";
 
 /**
- * Konfigurasi yang telah di-resolve dan siap digunakan oleh tool.
- * Semua path di sini adalah absolut.
+ * The resolved configuration, ready to be used by the tool.
+ * All paths here are absolute.
  */
 export type ResolvedConfig = {
   root: string;
@@ -15,8 +15,8 @@ export type ResolvedConfig = {
 };
 
 /**
- * Konfigurasi yang mungkin disediakan oleh pengguna di `cssg.config.ts`.
- * Semua properti bersifat opsional.
+ * The configuration that can be provided by the user in `cssg.config.ts`.
+ * All properties are optional.
  */
 export type UserConfig = Partial<Omit<ResolvedConfig, "root">>;
 
@@ -26,6 +26,7 @@ const defaultConfig: UserConfig = {
   dataDir: "src/data",
   assetsDir: "src/assets",
   outDir: "dist",
+  site: {},
 };
 
 export async function loadConfig(root: string): Promise<ResolvedConfig> {
@@ -33,8 +34,8 @@ export async function loadConfig(root: string): Promise<ResolvedConfig> {
   let userConfig: UserConfig = {};
 
   try {
-    // Tambahkan query parameter unik untuk "cache-busting".
-    // Paksa Deno untuk memuat ulang file dari disk, bukan dari cache.
+    // Add a unique query parameter for "cache-busting".
+    // This forces Deno to reload the file from disk, not from the cache.
     const mod = await import(
       `file://${path.toFileUrl(configPath).pathname}?v=${Date.now()}`
     );
@@ -42,23 +43,23 @@ export async function loadConfig(root: string): Promise<ResolvedConfig> {
   } catch (error) {
     if (!(error instanceof Deno.errors.NotFound)) {
       if (error instanceof Error) {
-        console.warn(`⚠️  Gagal memuat cssg.config.ts: ${error.message}`);
+        console.warn(`⚠️  Failed to load cssg.config.ts: ${error.message}`);
       } else {
         console.warn(
-          `⚠️  Gagal memuat cssg.config.ts dengan error yang tidak diketahui.`
+          `⚠️  Failed to load cssg.config.ts with an unknown error.`
         );
       }
     }
   }
 
-  // Gabungkan default, config pengguna, dan pastikan 'site' juga digabung dengan benar
+  // Merge the default config, user config, and ensure 'site' is also merged correctly.
   const mergedConfig = {
     ...defaultConfig,
     ...userConfig,
     site: { ...defaultConfig.site, ...userConfig.site },
   };
 
-  // Resolve semua path menjadi absolut
+  // Resolve all paths to be absolute.
   return {
     root,
     pagesDir: path.resolve(root, mergedConfig.pagesDir!),

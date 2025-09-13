@@ -6,20 +6,20 @@ import type { ResolvedConfig } from "./config.ts";
 import { extract } from "@std/front-matter/yaml";
 
 /**
- * Fungsi build utama untuk SSG.
- * @param mode Menentukan mode build: 'dev' untuk pengembangan, 'prod' untuk produksi.
+ * The main build function for the SSG.
+ * @param mode Specifies the build mode: 'dev' for development, 'prod' for production.
  */
 export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
   const isProd = mode === "prod";
   const basePath = Deno.env.get("BASE_PATH") || "";
-  console.log(`\n--- 🚀 Memulai build mode '${mode}' ---`);
+  console.log(`\n--- 🚀 Starting build in '${mode}' mode ---`);
 
   const { outDir, assetsDir, pagesDir, dataDir, layoutsDir } = config;
   const etaViewsRoot = config.root;
 
   try {
-    // Hanya bersihkan direktori 'dist' pada build pertama atau build produksi.
-    // Ini mencegah penghapusan yang tidak perlu selama hot-reload.
+    // Only clean the 'dist' directory on the first build or in production.
+    // This prevents unnecessary deletions during hot-reloading in dev mode.
     if (isProd) {
       await emptyDir(outDir);
     }
@@ -27,12 +27,12 @@ export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
 
     const eta = new Eta({ views: etaViewsRoot, useWith: true });
 
-    // --- Pemrosesan Aset (CSS & JS) ---
-    console.log("📦 Memproses aset...");
+    // --- Asset Processing (CSS & JS) ---
+    console.log("📦 Processing assets...");
 
     const assetPromises = [];
 
-    // 1. Konfigurasi untuk bundel dan minifikasi CSS
+    // 1. Configuration for bundling and minifying CSS
     const cssEntryPoint = join(assetsDir, "css", "style.css");
     if (await exists(cssEntryPoint, { isFile: true })) {
       assetPromises.push(
@@ -46,7 +46,7 @@ export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
       );
     }
 
-    // 2. Konfigurasi untuk file JavaScript
+    // 2. Configuration for JavaScript files
     const jsAssetsDir = join(assetsDir, "js");
     if (await exists(jsAssetsDir, { isDirectory: true })) {
       for await (const entry of walk(jsAssetsDir, { exts: [".js"] })) {
@@ -64,12 +64,12 @@ export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
     }
 
     await Promise.all(assetPromises);
-    console.log("✅ Aset berhasil diproses.");
+    console.log("✅ Assets processed successfully.");
 
-    // --- Memuat Data Dinamis ---
-    // Secara otomatis memuat semua file .json dari direktori data.
-    // Kunci objek akan menjadi nama file.
-    console.log("📚 Memuat data...");
+    // --- Loading Dynamic Data ---
+    // Automatically load all .json files from the data directory.
+    // The object key will be the filename.
+    console.log("📚 Loading data...");
     const siteData: Record<string, any> = {};
     if (await exists(dataDir, { isDirectory: true })) {
       for await (const entry of walk(dataDir, { exts: [".json"] })) {
@@ -80,12 +80,12 @@ export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
 
     const loadedDataKeys = Object.keys(siteData);
     if (loadedDataKeys.length > 0) {
-      console.log(`✅ Data berhasil dimuat: ${loadedDataKeys.join(", ")}`);
+      console.log(`✅ Data loaded successfully: ${loadedDataKeys.join(", ")}`);
     } else {
-      console.log("🤷 Tidak ada data yang dimuat.");
+      console.log("🤷 No data files were loaded.");
     }
-    // --- Merender Halaman Eta ke HTML ---
-    console.log("📄 Merender halaman...");
+    // --- Rendering Eta Pages to HTML ---
+    console.log("📄 Rendering pages...");
     for await (const entry of walk(pagesDir, { includeDirs: false })) {
       if (entry.isFile && entry.name.endsWith(".eta")) {
         try {
@@ -132,16 +132,16 @@ export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
           await ensureDir(join(outPath, ".."));
           await Deno.writeTextFile(outPath, html);
         } catch (err) {
-          console.error(`❌ Error render ${entry.path}:`, err);
+          console.error(`❌ Error rendering ${entry.path}:`, err);
         }
       }
     }
-    console.log("✅ Halaman berhasil dirender.");
+    console.log("✅ Pages rendered successfully.");
 
-    console.log(`\n--- ✨ Build mode '${mode}' selesai! ---`);
+    console.log(`\n--- ✨ Build in '${mode}' mode finished! ---`);
   } finally {
-    // Hanya hentikan esbuild saat build produksi.
-    // Di mode dev, service harus tetap berjalan untuk rebuild.
+    // Only stop esbuild during production builds.
+    // In dev mode, the service must keep running for rebuilds.
     if (isProd) {
       esbuild.stop();
     }

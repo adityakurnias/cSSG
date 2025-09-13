@@ -4,18 +4,18 @@ import { build } from "./build.ts";
 import { loadConfig } from "./config.ts";
 import type { ResolvedConfig } from "./config.ts";
 
-// Menyimpan semua koneksi WebSocket yang aktif untuk Hot Module Replacement (HMR).
+// Stores all active WebSocket connections for Hot Module Replacement (HMR).
 const clients = new Set<WebSocket>();
-// Flag untuk mencegah beberapa proses build berjalan bersamaan (race condition).
+// Flag to prevent multiple build processes from running concurrently (race condition).
 let buildInProgress = false;
 let config: ResolvedConfig;
 
 /**
- * Script yang diinjeksikan ke setiap halaman HTML di mode dev.
- * Bertugas untuk:
- * 1. Membuat koneksi WebSocket ke server dev.
- * 2. Mendengarkan pesan 'reload' dan memuat ulang halaman.
- * 3. Mencoba menyambung kembali secara otomatis jika koneksi terputus.
+ * Script injected into every HTML page in dev mode.
+ * Its responsibilities are:
+ * 1. Create a WebSocket connection to the dev server.
+ * 2. Listen for the 'reload' message and refresh the page.
+ * 3. Automatically try to reconnect if the connection is lost.
  */
 const hmrScript = `
 <script>
@@ -27,11 +27,30 @@ const hmrScript = `
    const ws = new WebSocket("ws://" + location.host + "/_ws");
    
    ws.onmessage = (ev) => {
-     if (ev.data === "reload") {
-       location.reload();
-     }
-   };
-   
+      if (ev.data === "reload") {
+        console.log("🔄 Full page reload requested");
+        location.reload();
+        return;
+      }
+      try {
+        const message = JSON.parse(ev.data);
+        if (message.type === 'css-update' && message.path) {
+          console.log('🎨 Applying CSS updates...');
+          const link = document.querySelector(\`link[rel="stylesheet"][href^="\${message.path}"]\`);
+          if (link) {
+            const newHref = message.path + '?t=' + Date.now();
+            link.href = newHref;
+          } else {
+            // Fallback to reload if the link isn't found
+            console.log("Could not find stylesheet, reloading page.");
+            location.reload();
+          }
+        }
+      } catch (e) {
+        console.error("HMR error:", e);
+      }
+    };
+
    ws.onopen = () => {
      retryCount = 0;
      console.log("🔗 HMR connected");
@@ -54,15 +73,15 @@ const hmrScript = `
 </script>
 `;
 
-// Cache sederhana untuk konten file HTML agar tidak perlu membaca dari disk pada setiap request.
+// A simple cache for HTML file content to avoid reading from disk on every request.
 const fileCache = new Map<string, { content: string; mtime: number }>();
 
 /**
- * Mengambil konten file dari cache jika memungkinkan.
- * Jika file di disk lebih baru dari yang di cache, cache akan diperbarui.
- * Ini mengoptimalkan penyajian file HTML yang sering diakses.
- * @param {string} filePath Path ke file.
- * @returns {Promise<string>} Konten file.
+ * Retrieves file content from the cache if possible.
+ * If the file on disk is newer than the cached version, the cache is updated.
+ * This optimizes serving frequently accessed HTML files.
+ * @param {string} filePath The path to the file.
+ * @returns {Promise<string>} The file content.
  */
 async function getFileWithCache(filePath: string): Promise<string> {
   try {
@@ -82,19 +101,19 @@ async function getFileWithCache(filePath: string): Promise<string> {
 
     return content;
   } catch {
-    // File tidak ditemukan atau error lain
+    // File not found or other error
     fileCache.delete(filePath);
     throw new Error(`File not found: ${filePath}`);
   }
 }
 
 /**
- * Fungsi debounced untuk men-trigger proses build ulang.
- * Ini mencegah build berjalan berulang kali saat banyak file disimpan dalam waktu singkat.
- * @param {string[]} changedPaths Daftar path file yang berubah.
+ * A debounced function to trigger the rebuild process.
+ * This prevents the build from running repeatedly when many files are saved in a short period.
+ * @param {string[]} changedPaths A list of paths for the files that have changed.
  */
 let rebuildTimer: number | undefined;
-const DEBOUNCE_MS = 200; // Waktu tunggu sebelum rebuild
+const DEBOUNCE_MS = 200; // Wait time before a rebuild
 
 function rebuild(changedPaths: string[]) {
   if (buildInProgress) {
@@ -110,12 +129,16 @@ function rebuild(changedPaths: string[]) {
       console.log("🔄 Rebuilding due to changes:", changedPaths);
       const startTime = performance.now();
 
-      // Cek apakah file konfigurasi berubah,
+      // Check if the configuration file has changed.
       const configPath = join(config.root, "cssg.config.ts");
       if (changedPaths.some((p) => p === configPath)) {
         console.log("⚙️ Config file changed, reloading...");
         config = await loadConfig(config.root);
       }
+
+      // Determine if only CSS files were changed.
+      // This is a simple check; it could be expanded to include preprocessor files (e.g., .scss).
+      const isCssOnlyChange = changedPaths.every((p) => p.endsWith(".css"));
 
       await build(config, "dev");
 
@@ -124,11 +147,15 @@ function rebuild(changedPaths: string[]) {
         `✅ Rebuild completed in ${(endTime - startTime).toFixed(2)}ms`
       );
 
-      // Kirim sinyal 'reload' ke semua klien yang terhubung.
-      for (const client of clients) {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send("reload");
-        }
+      // Send a granular CSS update or a full reload signal.
+      if (isCssOnlyChange) {
+        const cssUpdatePayload = JSON.stringify({
+          type: "css-update",
+          path: "/assets/css/style.css", // Assumes a single CSS output file
+        });
+        clients.forEach((client) => client.send(cssUpdatePayload));
+      } else {
+        clients.forEach((client) => client.send("reload"));
       }
     } catch (error) {
       console.error("❌ Build error:", error);
@@ -139,16 +166,16 @@ function rebuild(changedPaths: string[]) {
 }
 
 /**
- * Memulai server pengembangan, melakukan build awal, dan mengawasi perubahan file.
+ * Starts the development server, performs an initial build, and watches for file changes.
  */
 export async function startDevServer() {
-  // Lakukan build awal saat server pertama kali dijalankan.
+  // Perform an initial build when the server first starts.
   config = await loadConfig(Deno.cwd());
   console.log("🏗️  Initial build...");
   await build(config, "dev");
   console.log("👀 Watching for changes...");
 
-  // Jalankan server HTTP utama yang juga menangani upgrade ke WebSocket.
+  // Run the main HTTP server, which also handles WebSocket upgrades.
   Deno.serve(
     {
       port: 3000,
@@ -160,8 +187,13 @@ export async function startDevServer() {
 
       if (pathname === "/_ws") {
         const { socket, response } = Deno.upgradeWebSocket(req);
-        socket.onopen = () => clients.add(socket);
-        socket.onclose = () => clients.delete(socket);
+        socket.onopen = () => {
+          clients.add(socket);
+        };
+        socket.onclose = () => {
+          clients.delete(socket);
+        };
+        socket.onerror = (e) => console.error("WebSocket error:", e);
         return response;
       }
 
@@ -192,7 +224,7 @@ export async function startDevServer() {
     }
   );
 
-  // Awasi perubahan file di dalam direktori.
+  // Watch for file changes within the project directory.
   const ignoredPaths = [/\.git/, /dist/, /\.DS_Store/, /\.log$/, /\.tmp$/];
   function shouldIgnore(path: string): boolean {
     return ignoredPaths.some((pattern) => pattern.test(path));

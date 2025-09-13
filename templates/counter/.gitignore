@@ -1,0 +1,17 @@
+# cSSG
+dist
+
+# Deno
+deno.lock
+
+# Node
+node_modules
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
