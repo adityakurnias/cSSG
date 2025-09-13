@@ -1,8 +1,7 @@
 import { parseArgs } from "@std/cli/parse-args";
-import { createServer } from "vite";
 import { build } from "./core/build.ts";
-import { cSSGPlugin } from "../scripts/vite-plugin-cssg.ts";
-import { resolve } from "@std/path";
+import { loadConfig } from "./core/config.ts";
+import { init } from "./core/init.ts";
 
 const args = parseArgs(Deno.args, { boolean: ["help"], alias: { h: "help" } });
 const command = args._[0];
@@ -14,33 +13,35 @@ USAGE:
   cssg <COMMAND>
 
 COMMANDS:
+  init    Initialize a new cSSG project.
   build   Build the site for production.
-  dev     Start the development server with Vite.
+  dev     Start the development server.
   `);
   Deno.exit(0);
 }
 
 const userRoot = Deno.cwd();
-const distDir = resolve(userRoot, "dist");
 
 switch (command) {
-  case "build":
-    console.log("🚀 Memulai production build...");
-    await build({ mode: "prod", cwd: userRoot });
-    console.log("✨ Build selesai.");
+  case "init":
+    await init(userRoot);
     break;
 
-  case "dev":
-    const server = await createServer({
-      root: distDir, // Vite akan menyajikan file dari 'dist'
-      server: { port: 3000 },
-      plugins: [cSSGPlugin({ cwd: userRoot })],
-      // Kosongkan 'dist' agar Vite tidak bingung dengan file lama saat start
-      clearScreen: false,
-    });
-    await server.listen();
-    server.printUrls();
+  case "build": {
+    const config = await loadConfig(userRoot);
+    console.log("🚀 Memulai production build...");
+    await build(config, "prod");
+    console.log("✨ Build selesai.");
     break;
+  }
+
+  case "dev": {
+    // Menjalankan server pengembangan kustom sebagai modul terpisah.
+    // Ini adalah cara bersih untuk menjalankannya tanpa Vite.
+    console.log("🔥 Starting custom dev server...");
+    await import("./core/dev.ts");
+    break;
+  }
 
   default:
     console.error(`❌ Perintah tidak dikenal: ${command}`);

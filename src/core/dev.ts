@@ -1,11 +1,14 @@
 import { serveDir } from "@std/http/file-server";
 import { join } from "@std/path";
-import { build } from "@adityakurnias/cssg";
+import { build } from "./build.ts";
+import { loadConfig } from "./config.ts";
+import type { ResolvedConfig } from "./config.ts";
 
 // Menyimpan semua koneksi WebSocket yang aktif untuk Hot Module Replacement (HMR).
 const clients = new Set<WebSocket>();
 // Flag untuk mencegah beberapa proses build berjalan bersamaan (race condition).
 let buildInProgress = false;
+let config: ResolvedConfig;
 
 /**
  * Script yang diinjeksikan ke setiap halaman HTML di mode dev.
@@ -107,7 +110,7 @@ function rebuild(changedPaths: string[]) {
       console.log("🔄 Rebuilding due to changes:", changedPaths);
       const startTime = performance.now();
 
-      await build("dev");
+      await build(config, "dev");
 
       const endTime = performance.now();
       console.log(
@@ -131,7 +134,8 @@ function rebuild(changedPaths: string[]) {
 // Jalankan server HTTP utama yang juga menangani upgrade ke WebSocket.
 Deno.serve(
   {
-    port: 8000,
+    // Gunakan port 3000 agar konsisten dengan Vite
+    port: 3000,
     onListen: ({ port }) =>
       console.log(`🚀 Dev server running on http://localhost:${port}`),
   },
@@ -159,7 +163,7 @@ Deno.serve(
     if (pathname.endsWith(".html") || pathname === "/") {
       try {
         const filePath = join(
-          Deno.cwd(),
+          config.root,
           "dist",
           pathname === "/" ? "index.html" : pathname
         );
@@ -190,18 +194,13 @@ Deno.serve(
 );
 
 // Lakukan build awal saat server pertama kali dijalankan.
+config = await loadConfig(Deno.cwd());
 console.log("🏗️  Initial build...");
-await build("dev");
+await build(config, "dev");
 console.log("👀 Watching for changes...");
 
 // Daftar path atau pola yang akan diabaikan oleh file watcher.
-const ignoredPaths = [
-  /\.git/,
-  /dist/,
-  /\.DS_Store/,
-  /\.log$/,
-  /\.tmp$/,
-];
+const ignoredPaths = [/\.git/, /dist/, /\.DS_Store/, /\.log$/, /\.tmp$/];
 
 function shouldIgnore(path: string): boolean {
   return ignoredPaths.some((pattern) => pattern.test(path));

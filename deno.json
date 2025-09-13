@@ -1,9 +1,10 @@
 {
   "name": "@adityakurnias/cssg",
   "version": "0.1.0",
-  "exports": {
-    ".": "./scripts/build.ts",
-    "./cli": "./cli.ts"
+  "license": "MIT",
+  "exports": "./mod.ts",
+  "executables": {
+    "cssg": "src/cli.ts"
   },
   "imports": {
     "@std/async": "jsr:@std/async@^1.0.1",
@@ -13,12 +14,12 @@
     "@std/fs": "jsr:@std/fs@^1.0.19",
     "@std/http": "jsr:@std/http@^1.0.20",
     "@std/path": "jsr:@std/path@^1.1.2",
-    "esbuild": "npm:esbuild@^0.25.9",
-    "vite": "npm:vite@^7.1.5"
+    "esbuild": "npm:esbuild@^0.25.9"
   },
   "tasks": {
-    "dev": "deno run -A cli.ts dev",
-    "build": "deno run -A cli.ts build",
-    "serve": "deno run -A --unstable-fs scripts/serve.ts dist"
+    "init": "deno run -A src/cli.ts init",
+    "dev": "deno run -A src/cli.ts dev",
+    "build": "deno run -A src/cli.ts build",
+    "serve": "deno run -A src/core/serve.ts"
   }
 }
