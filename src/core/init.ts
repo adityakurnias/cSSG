@@ -83,6 +83,23 @@ export async function init(targetRoot: string) {
     }...\n`
   );
 
+  // Pastikan direktori target ada sebelum memeriksa isinya
+  await ensureDir(targetRoot);
+
+  // Periksa apakah direktori target kosong.
+  let isEmpty = true;
+  for await (const _ of Deno.readDir(targetRoot)) {
+    isEmpty = false;
+    break;
+  }
+
+  if (!isEmpty) {
+    console.error(
+      `❌ Direktori target "${relativePath}" tidak kosong. Silakan gunakan direktori yang kosong.`
+    );
+    Deno.exit(1);
+  }
+
   const dirs = ["src", "src/pages", "src/layouts", "src/data", "src/assets"];
   for (const dir of dirs) {
     const dirPath = path.join(targetRoot, dir);
