@@ -110,6 +110,13 @@ function rebuild(changedPaths: string[]) {
       console.log("🔄 Rebuilding due to changes:", changedPaths);
       const startTime = performance.now();
 
+      // Cek apakah file konfigurasi berubah,
+      const configPath = join(config.root, "cssg.config.ts");
+      if (changedPaths.some((p) => p === configPath)) {
+        console.log("⚙️ Config file changed, reloading...");
+        config = await loadConfig(config.root);
+      }
+
       await build(config, "dev");
 
       const endTime = performance.now();
@@ -185,12 +192,12 @@ export async function startDevServer() {
     }
   );
 
-  // Awasi perubahan file di dalam direktori 'src/'.
+  // Awasi perubahan file di dalam direktori.
   const ignoredPaths = [/\.git/, /dist/, /\.DS_Store/, /\.log$/, /\.tmp$/];
   function shouldIgnore(path: string): boolean {
     return ignoredPaths.some((pattern) => pattern.test(path));
   }
-  for await (const event of Deno.watchFs(config.pagesDir, {
+  for await (const event of Deno.watchFs(config.root, {
     recursive: true,
   })) {
     const validPaths = event.paths.filter((path) => !shouldIgnore(path));

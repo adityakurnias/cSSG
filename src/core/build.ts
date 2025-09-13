@@ -15,7 +15,6 @@ export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
   console.log(`\n--- 🚀 Memulai build mode '${mode}' ---`);
 
   const { outDir, assetsDir, pagesDir, dataDir, layoutsDir } = config;
-  // Eta's views root should be the project root to resolve layoutsDir correctly
   const etaViewsRoot = config.root;
 
   try {
