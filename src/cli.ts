@@ -43,8 +43,8 @@ switch (command) {
   case "dev": {
     // Menjalankan server pengembangan kustom sebagai modul terpisah.
     // Ini adalah cara bersih untuk menjalankannya tanpa Vite.
-    console.log("🔥 Starting custom dev server...");
-    await import("./core/dev.ts");
+    const { startDevServer } = await import("./core/dev.ts");
+    await startDevServer();
     break;
   }
 

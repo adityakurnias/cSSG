@@ -131,87 +131,70 @@ function rebuild(changedPaths: string[]) {
   }, DEBOUNCE_MS);
 }
 
-// Jalankan server HTTP utama yang juga menangani upgrade ke WebSocket.
-Deno.serve(
-  {
-    // Gunakan port 3000 agar konsisten dengan Vite
-    port: 3000,
-    onListen: ({ port }) =>
-      console.log(`🚀 Dev server running on http://localhost:${port}`),
-  },
-  async (req) => {
-    const { pathname } = new URL(req.url);
+/**
+ * Memulai server pengembangan, melakukan build awal, dan mengawasi perubahan file.
+ */
+export async function startDevServer() {
+  // Lakukan build awal saat server pertama kali dijalankan.
+  config = await loadConfig(Deno.cwd());
+  console.log("🏗️  Initial build...");
+  await build(config, "dev");
+  console.log("👀 Watching for changes...");
 
-    // Endpoint khusus untuk koneksi WebSocket dari HMR script.
-    if (pathname === "/_ws") {
-      const { socket, response } = Deno.upgradeWebSocket(req);
+  // Jalankan server HTTP utama yang juga menangani upgrade ke WebSocket.
+  Deno.serve(
+    {
+      port: 3000,
+      onListen: ({ port }) =>
+        console.log(`🚀 Dev server running on http://localhost:${port}`),
+    },
+    async (req) => {
+      const { pathname } = new URL(req.url);
 
-      socket.onopen = () => {
-        clients.add(socket);
-        console.log(`📡 Client connected (${clients.size} total)`);
-      };
-
-      socket.onclose = () => {
-        clients.delete(socket);
-        console.log(`📡 Client disconnected (${clients.size} total)`);
-      };
-
-      return response;
-    }
-
-    // Untuk request file HTML, injeksikan HMR script sebelum mengirim response.
-    if (pathname.endsWith(".html") || pathname === "/") {
-      try {
-        const filePath = join(
-          config.root,
-          "dist",
-          pathname === "/" ? "index.html" : pathname
-        );
-        const file = await getFileWithCache(filePath);
-
-        const injected = file.includes("</body>")
-          ? file.replace("</body>", `${hmrScript}</body>`)
-          : file + hmrScript;
-
-        return new Response(injected, {
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "cache-control": "no-cache, no-store, must-revalidate",
-          },
-        });
-      } catch {
-        return new Response("404 - Page not found", { status: 404 });
+      if (pathname === "/_ws") {
+        const { socket, response } = Deno.upgradeWebSocket(req);
+        socket.onopen = () => clients.add(socket);
+        socket.onclose = () => clients.delete(socket);
+        return response;
       }
+
+      if (pathname.endsWith(".html") || pathname === "/") {
+        try {
+          const filePath = join(
+            config.outDir,
+            pathname === "/" ? "index.html" : pathname
+          );
+          const file = await getFileWithCache(filePath);
+          const injected = file.replace("</body>", `${hmrScript}</body>`);
+          return new Response(injected, {
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "cache-control": "no-cache",
+            },
+          });
+        } catch {
+          return new Response("404 - Page not found", { status: 404 });
+        }
+      }
+
+      return serveDir(req, {
+        fsRoot: config.outDir,
+        enableCors: true,
+        headers: ["cache-control: no-cache"],
+      });
     }
+  );
 
-    // Untuk request lain (CSS, JS, gambar), sajikan file statis dari direktori 'dist'.
-    return serveDir(req, {
-      fsRoot: "dist",
-      enableCors: true,
-      headers: ["cache-control: no-cache"], // Disable caching in dev mode
-    });
+  // Awasi perubahan file di dalam direktori 'src/'.
+  const ignoredPaths = [/\.git/, /dist/, /\.DS_Store/, /\.log$/, /\.tmp$/];
+  function shouldIgnore(path: string): boolean {
+    return ignoredPaths.some((pattern) => pattern.test(path));
   }
-);
-
-// Lakukan build awal saat server pertama kali dijalankan.
-config = await loadConfig(Deno.cwd());
-console.log("🏗️  Initial build...");
-await build(config, "dev");
-console.log("👀 Watching for changes...");
-
-// Daftar path atau pola yang akan diabaikan oleh file watcher.
-const ignoredPaths = [/\.git/, /dist/, /\.DS_Store/, /\.log$/, /\.tmp$/];
-
-function shouldIgnore(path: string): boolean {
-  return ignoredPaths.some((pattern) => pattern.test(path));
-}
-
-// Awasi perubahan file di dalam direktori 'src/'.
-for await (const event of Deno.watchFs(["src"], { recursive: true })) {
-  const validPaths = event.paths.filter((path) => !shouldIgnore(path));
-
-  if (validPaths.length === 0) continue;
-  if (event.kind === "access") continue; // Ignore file access events
-
-  rebuild(validPaths);
+  for await (const event of Deno.watchFs(config.pagesDir, {
+    recursive: true,
+  })) {
+    const validPaths = event.paths.filter((path) => !shouldIgnore(path));
+    if (validPaths.length === 0 || event.kind === "access") continue;
+    rebuild(validPaths);
+  }
 }
