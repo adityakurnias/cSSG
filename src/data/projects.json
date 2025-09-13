@@ -2,7 +2,11 @@
   {
     "name": "cSSG",
     "desc": "Static Site Generator mini berbasis Deno dan ETA. Dirancang simpel untuk belajar dan eksperimen membuat website statis.",
-    "url": "https://github.com/adityakurnias",
-    "tags": ["deno", "ssg", "ejs", "static-site"]
+    "url": "https://github.com/adityakurnias/cSSG"
+  },
+  {
+    "name": "Porto",
+    "desc": "My personal Portofolio",
+    "url": "https://github.com/adityakurnias/porto"
   }
 ]

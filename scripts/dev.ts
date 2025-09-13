@@ -2,13 +2,24 @@ import { serveDir } from "@std/http/file-server";
 import { join } from "@std/path";
 import { build } from "./build.ts";
 
-
 const clients = new Set<WebSocket>();
 
-// server HTTP + WS
+// Script auto-reload
+const hmrScript = `
+<script>
+(function connect(){
+  const ws=new WebSocket("ws://"+location.host+"/_ws");
+  ws.onmessage=(ev)=>{ if(ev.data==="reload") location.reload(); };
+  ws.onclose=()=>setTimeout(connect,1000); // auto reconnect
+})();
+</script>
+`;
+
+// Jalankan HTTP + WebSocket server
 Deno.serve(async (req) => {
   const { pathname } = new URL(req.url);
 
+  // WebSocket endpoint
   if (pathname === "/_ws") {
     const { socket, response } = Deno.upgradeWebSocket(req);
     socket.onopen = () => clients.add(socket);
@@ -16,30 +27,33 @@ Deno.serve(async (req) => {
     return response;
   }
 
-  // Inject HMR ke setiap HTML di dist
+  // Inject script HMR ke HTML
   if (pathname.endsWith(".html") || pathname === "/") {
     const file = await Deno.readTextFile(
-      join(Deno.cwd(), "dist", pathname === "/" ? "index.html" : pathname)
+      join(Deno.cwd(), "dist", pathname === "/" ? "index.html" : pathname),
     );
-    const injected = file.replace(
-      "</body>",
-      `<script>
-        const ws=new WebSocket("ws://localhost:8000/_ws");
-        ws.onmessage=(ev)=>{if(ev.data==="reload") location.reload();}
-      </script></body>`
-    );
-    return new Response(injected, { headers: { "content-type": "text/html" } });
+    const injected = file.includes("</body>")
+      ? file.replace("</body>", `${hmrScript}</body>`)
+      : file + hmrScript;
+    return new Response(injected, {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
   }
 
+  // Serve file statis
   return serveDir(req, { fsRoot: "dist" });
 });
 
-// Menjalankan build untuk pertama kali
+// Build pertama kali
 await build();
 
-// Melakukan watch ke file di src
+// Watch `src/` untuk rebuild otomatis
+let timer: number | undefined;
 for await (const event of Deno.watchFs("src")) {
-  console.log("🔄 Rebuilding due to change:", event.paths);
-  await build();
-  for (const c of clients) c.send("reload");
+  clearTimeout(timer);
+  timer = setTimeout(async () => {
+    console.log("🔄 Rebuilding due to change:", event.paths);
+    await build();
+    for (const c of clients) c.send("reload"); // push reload ke semua client
+  }, 100); // debounce 100ms
 }
