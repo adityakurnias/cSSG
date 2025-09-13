@@ -2,16 +2,15 @@ import { parseArgs } from "@std/cli/parse-args";
 import { build } from "./core/build.ts";
 import { resolve } from "@std/path";
 import { loadConfig } from "./core/config.ts";
-import { createProject } from "./core/create.ts";
+import { createProject, listTemplates } from "./core/create.ts";
 
 // Parse command-line arguments using Deno's standard library.
 const args = parseArgs(Deno.args, {
-  boolean: ["help", "force"],
+  boolean: ["help", "force", "remote"],
   string: ["template"],
   alias: {
     h: "help",
     f: "force",
-    t: "template",
   },
 });
 
@@ -29,13 +28,15 @@ COMMANDS:
   create <name>   Create a new cSSG project (recommended)
   build           Build the site for production
   dev             Start the development server
+  list            List all available template
 
 CREATE OPTIONS:
   -f, --force      Overwrite existing directory
-  -t, --template   Template to use (default: basic)
+  -t, --template   Use a remote template from the official repository (default: basic)
 
 EXAMPLES:
   cssg create my-blog
+  cssg create my-blog -t counter --remote
   cssg dev         # start dev server
   cssg build       # build for production
   `);
@@ -93,6 +94,11 @@ switch (command) {
     const { startDevServer } = await import("./core/dev.ts");
     // Start the development server, which includes file watching and HMR.
     await startDevServer();
+    break;
+  }
+
+  case "list": {
+    await listTemplates();
     break;
   }
 

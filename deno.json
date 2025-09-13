@@ -1,12 +1,13 @@
 {
   "name": "@adityakurnias/cssg",
-  "version": "0.0.412",
+  "version": "0.0.42",
   "license": "MIT",
   "exports": "./mod.ts",
   "executables": {
     "cssg": "src/cli.ts"
   },
   "imports": {
+    "@std/archive": "jsr:@std/archive@^0.225.4",
     "@std/async": "jsr:@std/async@^1.0.1",
     "@eta-dev/eta": "jsr:@eta-dev/eta@^3.5.0",
     "@std/cli": "jsr:@std/cli@^1.0.22",
