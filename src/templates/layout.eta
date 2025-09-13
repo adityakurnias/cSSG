@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= it.title %></title>
+</head>
+<body>
+  <header>
+    <h1><%= it.title %></h1>
+  </header>
+  <main>
+    <%~ it.body %>
+  </main>
+</body>
+</html>

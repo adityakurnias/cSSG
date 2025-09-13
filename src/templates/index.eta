@@ -1,0 +1,9 @@
+<ul>
+  <% it.projects.forEach(project => { %>
+    <li>
+      <h2><%~ project.name %></h2>
+      <p><%~ project.desc %></p>
+      <a href="<%~ project.url %>">Lihat Project</a>
+    </li>
+  <% }) %>
+</ul>
