@@ -6,6 +6,7 @@
     "@std/path": "jsr:@std/path@^1.1.2"
   },
   "tasks": {
+    "dev": "deno run -A ./scripts/dev.ts",
     "build": "deno run ./scripts/build.ts",
     "serve": "deno run -A ./scripts/serve.ts dist"
   }

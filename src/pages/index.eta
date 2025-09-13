@@ -1,4 +1,4 @@
-<ul>
+ <ul>
   <% it.projects.forEach(project => { %>
     <li>
       <h2><%~ project.name %></h2>
