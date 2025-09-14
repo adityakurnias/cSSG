@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Publish to JSR
 
 on:
   push:
@@ -19,6 +19,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     env:
       BASE_PATH: /${{ github.event.repository.name }}
 
@@ -34,38 +37,6 @@ jobs:
       - name: Verify Deno installation
         run: deno --version
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/deno
-          key: ${{ runner.os }}-deno-${{ hashFiles('**/*.ts', '**/*.js') }}
-          restore-keys: |
-            ${{ runner.os }}-deno-
-
-      - name: Build site
-        run: deno task build
-        working-directory: ./template
-
-      - name: List dist contents (debug)
-        run: find dist -type f -name "*.html" -o -name "*.css" -o -name "*.js" | head -20
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: "./template/dist"
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+      - name: Publish package
+        run: deno publish
