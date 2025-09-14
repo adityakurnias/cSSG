@@ -1,5 +1,6 @@
+// deno-lint-ignore-file no-explicit-any
 import { Eta } from "@eta-dev/eta";
-import { emptyDir, ensureDir, exists, walk } from "@std/fs";
+import { copy, emptyDir, ensureDir, exists, walk } from "@std/fs";
 import { join, relative } from "@std/path";
 import * as esbuild from "esbuild";
 import type { ResolvedConfig } from "./config.ts";
@@ -14,7 +15,8 @@ export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
   const basePath = Deno.env.get("BASE_PATH") || "";
   console.log(`\n--- 🚀 Starting build in '${mode}' mode ---`);
 
-  const { outDir, assetsDir, pagesDir, dataDir, layoutsDir } = config;
+  const { outDir, assetsDir, pagesDir, dataDir, layoutsDir, publicDir } =
+    config;
   const etaViewsRoot = config.root;
 
   try {
@@ -65,6 +67,15 @@ export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
 
     await Promise.all(assetPromises);
     console.log("✅ Assets processed successfully.");
+
+    // --- Copying Public Directory ---
+    console.log("📂 Copying public directory...");
+    if (await exists(publicDir, { isDirectory: true })) {
+      await copy(publicDir, outDir, { overwrite: true });
+      console.log("✅ Public directory copied successfully.");
+    } else {
+      console.log("🤷 No public directory found, skipping.");
+    }
 
     // --- Loading Dynamic Data ---
     // Automatically load all .json files from the data directory.
@@ -140,8 +151,6 @@ export async function build(config: ResolvedConfig, mode: "dev" | "prod") {
 
     console.log(`\n--- ✨ Build in '${mode}' mode finished! ---`);
   } finally {
-    // Only stop esbuild during production builds.
-    // In dev mode, the service must keep running for rebuilds.
     if (isProd) {
       esbuild.stop();
     }

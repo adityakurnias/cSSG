@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import * as path from "@std/path";
 
 /**
@@ -10,6 +11,7 @@ export type ResolvedConfig = {
   layoutsDir: string;
   dataDir: string;
   assetsDir: string;
+  publicDir: string;
   outDir: string;
   site: Record<string, any>;
 };
@@ -25,6 +27,7 @@ const defaultConfig: UserConfig = {
   layoutsDir: "src/layouts",
   dataDir: "src/data",
   assetsDir: "src/assets",
+  publicDir: "public",
   outDir: "dist",
   site: {},
 };
@@ -44,6 +47,8 @@ export async function loadConfig(root: string): Promise<ResolvedConfig> {
     if (!(error instanceof Deno.errors.NotFound)) {
       if (error instanceof Error) {
         console.warn(`⚠️  Failed to load cssg.config.ts: ${error.message}`);
+        console.warn(`⚠️  Make sure you're on project directory ⚠️`);
+        Deno.exit(1);
       } else {
         console.warn(
           `⚠️  Failed to load cssg.config.ts with an unknown error.`
@@ -66,6 +71,7 @@ export async function loadConfig(root: string): Promise<ResolvedConfig> {
     layoutsDir: path.resolve(root, mergedConfig.layoutsDir!),
     dataDir: path.resolve(root, mergedConfig.dataDir!),
     assetsDir: path.resolve(root, mergedConfig.assetsDir!),
+    publicDir: path.resolve(root, mergedConfig.publicDir!),
     outDir: path.resolve(root, mergedConfig.outDir!),
     site: mergedConfig.site!,
   };
