@@ -39,9 +39,9 @@ export async function loadConfig(root: string): Promise<ResolvedConfig> {
   try {
     // Add a unique query parameter for "cache-busting".
     // This forces Deno to reload the file from disk, not from the cache.
-    const mod = await import(
-      `file://${path.toFileUrl(configPath).pathname}?v=${Date.now()}`
-    );
+    const configUrl = path.toFileUrl(configPath);
+    configUrl.searchParams.set("v", Date.now().toString());
+    const mod = await import(configUrl.href);
     userConfig = (mod.default || {}) as UserConfig;
   } catch (error) {
     if (!(error instanceof Deno.errors.NotFound)) {
